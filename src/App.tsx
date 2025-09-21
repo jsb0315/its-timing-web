@@ -24,7 +24,7 @@ function App() {
 
   const addCandle = () => {
     // 새 캔들 추가 시 자동 정지
-    setIsPlaying(false);
+    // setIsPlaying(false);
     setCandles(prev => {
       const last = prev[prev.length - 1] ?? initial;
       const base = last.close;
