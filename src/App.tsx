@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Candle } from './types/game';
 import { GAME_CONFIG } from './types/game';
 import CandlePreviewList from './components/CandlePreviewList.tsx';
@@ -18,10 +18,13 @@ function App() {
 
   const [candles, setCandles] = useState<Candle[]>([initial]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  const clamp = (v: number) => Math.min(range.max, Math.max(range.min, v));
+  const clamp = useCallback((v: number) => Math.min(range.max, Math.max(range.min, v)), [range.max, range.min]);
 
   const addCandle = () => {
+    // 새 캔들 추가 시 자동 정지
+    setIsPlaying(false);
     setCandles(prev => {
       const last = prev[prev.length - 1] ?? initial;
       const base = last.close;
@@ -46,6 +49,34 @@ function App() {
       return next;
     });
   };
+
+  // 재생 루프: 선택된 캔들의 현재가(여기서는 close)를 틱마다 약간 랜덤하게 변동
+  useEffect(() => {
+    if (!isPlaying) return;
+    const TICK_MS = 50;
+    const TICK_RANGE = 1 + Math.random() * 10; // 1~10 단위 (range는 clamp 처리)
+
+    const id = window.setInterval(() => {
+      setCandles(prev => {
+        const idx = selectedIndex;
+        if (idx < 0 || idx >= prev.length) return prev;
+        const next = [...prev];
+        const c = { ...next[idx] };
+        const delta = (Math.random() - 0.5) * 2 * TICK_RANGE; // [-5, 5]
+        const newClose = clamp(c.close + delta);
+        c.close = newClose;
+        // high/low 업데이트: open과 close 포함
+        const minOC = Math.min(c.open, newClose);
+        const maxOC = Math.max(c.open, newClose);
+        c.low = Math.min(c.low, minOC);
+        c.high = Math.max(c.high, maxOC);
+        next[idx] = c;
+        return next;
+      });
+    }, TICK_MS);
+
+    return () => clearInterval(id);
+  }, [isPlaying, selectedIndex, clamp]);
 
   const updateField = (field: 'open' | 'close' | 'high' | 'low', value: number) => {
     setCandles((prev: Candle[]) => {
@@ -95,13 +126,22 @@ function App() {
               onSelect={setSelectedIndex}
             />
           </div>
-          <button
-            type="button"
-            onClick={addCandle}
-            className="ml-2 px-4 py-2 rounded-md bg-bull text-white font-semibold hover:opacity-90 transition"
-          >
-            캔들 추가
-          </button>
+          <div className="ml-2 mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsPlaying(p => !p)}
+              className="px-4 py-2 rounded-md bg-gray-800 text-white font-semibold hover:opacity-90 transition"
+            >
+              {isPlaying ? '정지' : '재생'}
+            </button>
+            <button
+              type="button"
+              onClick={addCandle}
+              className="px-4 py-2 rounded-md bg-bull text-white font-semibold hover:opacity-90 transition"
+            >
+              캔들 추가
+            </button>
+          </div>
         </div>
 
         {/* 컨트롤 패널 */}
