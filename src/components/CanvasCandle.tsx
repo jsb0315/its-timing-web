@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import type { Candle } from '../types/game';
-import { GAME_CONFIG } from '../types/game';
+import type { Candle } from '../types/Candle';
+import { GAME_CONFIG } from '../types/Candle';
 
 interface Props {
   candle: Candle;
